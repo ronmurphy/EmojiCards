@@ -1,0 +1,2006 @@
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji RPG Battle</title>
+    <meta name="description" content="An interactive card-based RPG battle game with emoji avatars and elemental powers.">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #1a1a2e;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            touch-action: manipulation;
+        }
+        #gameCanvas {
+            border: 2px solid #ffffff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        #startMenu, #tutorialOverlay, #attackConfirmation, #gameOverMenu, #assignmentConfirmation, #deckOptions, #cardBrowser {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        #readyButton, #surrenderButton, #nextButton, #yesButton, #noButton, #newGameButton, #saveDeckButton, #loadDeckButton, #tutorialButton, #cardBrowserButton {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #surrenderButton {
+            background-color: #f44336;
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 10px 20px;
+            font-size: 14px;
+            display: none;
+        }
+        #tutorialButton, #cardBrowserButton {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 10px;
+            font-size: 20px;
+        }
+        #cardBrowserButton {
+            top: 60px;
+        }
+        #tutorialOverlay {
+            display: none;
+            max-width: 80%;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+        #attackConfirmation, #gameOverMenu, #assignmentConfirmation, #deckOptions {
+            display: none;
+        }
+        #aStatsBox, #cardInfoBox {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 80%;
+            max-height: 80%;
+        }
+        #aStatsBox .card-column, #cardInfoBox .card-column {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #aStatsBox .stats-column, #cardInfoBox .stats-column {
+            overflow-y: auto;
+        }
+        @keyframes rainbow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .lucky-star {
+            background: linear-gradient(124deg, #ff2400, #e81d1d, #e8b71d, #e3e81d, #1de840, #1ddde8, #2b1de8, #dd00f3, #dd00f3);
+            background-size: 1800% 1800%;
+            animation: rainbow 18s ease infinite;
+        }
+        .effect-button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 12px;
+            margin: 2px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        @keyframes flipCard {
+            0% { transform: rotateY(0deg); }
+            100% { transform: rotateY(180deg); }
+        }
+        @keyframes confetti {
+            0% { transform: translate(0, 0); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)); opacity: 0; }
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            animation: confetti 2s forwards;
+        }
+        @keyframes shakeCard {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .elemental-weapon {
+            background-color: #ffebcd;
+        }
+        @keyframes fireRain {
+            0% { transform: translateY(-100%); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(100%); opacity: 0; }
+        }
+        @keyframes iceSweep {
+            0% { transform: translateX(-100%); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateX(100%); opacity: 0; }
+        }
+        @keyframes lightningStrike {
+            0%, 100% { opacity: 0; }
+            10%, 90% { opacity: 1; }
+        }
+        @keyframes earthQuake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px) rotate(-5deg); }
+            75% { transform: translateX(5px) rotate(5deg); }
+        }
+        @keyframes waterSplash {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.5); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        @keyframes shakeDamage {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-2px); }
+            75% { transform: translateX(2px); }
+        }
+        @keyframes cycleHeartColors {
+            0% { color: red; }
+            20% { color: blue; }
+            40% { color: green; }
+            60% { color: orange; }
+            80% { color: yellow; }
+            100% { color: red; }
+        }
+        .damage-text {
+            position: absolute;
+            color: red;
+            font-weight: bold;
+            animation: shakeDamage 0.5s ease-in-out;
+        }
+        .healing-heart {
+            animation: cycleHeartColors 2s infinite;
+        }
+        #cardBrowser {
+            display: none;
+            width: 80%;
+            height: 80%;
+            position: fixed;
+            top: 10%;
+            left: 10%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+        }
+        #cardGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            overflow-y: auto;
+            height: 100%;
+            width: 66%;
+            float: left;
+        }
+        #cardDetails {
+            width: 33%;
+            float: right;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .card-item {
+            background-color: #ffffff;
+            color: #000000;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+        }
+        .avatar-rarity-indicator {
+            height: 8px;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .rarity-gold {
+            background-color: gold;
+        }
+        .rarity-green {
+            background-color: green;
+        }
+        .rarity-grey {
+            background-color: grey;
+        }
+        .rarity-rainbow {
+            background: linear-gradient(124deg, #ff2400, #e81d1d, #e8b71d, #e3e81d, #1de840, #1ddde8, #2b1de8, #dd00f3, #dd00f3);
+            background-size: 1800% 1800%;
+            animation: rainbow 18s ease infinite;
+        }
+    </style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><style>
+                        body, html {
+                            touch-action: manipulation;
+                            user-select: none;
+                            -webkit-user-select: none;
+                            -webkit-touch-callout: none;
+                            -webkit-tap-highlight-color: rgba(0,0,0,0);
+                        }
+                    </style></head>
+<body>
+    <canvas id="gameCanvas" width="486" height="896"></canvas>
+    <div id="startMenu" style="display: none;">
+        <h1>Emoji RPG Battle</h1>
+        <button id="readyButton">Ready</button>
+    </div>
+    <button id="surrenderButton" style="display: block;">Surrender</button>
+    <button id="tutorialButton">❓</button>
+    <button id="cardBrowserButton">🃏</button>
+    <div id="tutorialOverlay" style="display: block;">
+        <h2>Tutorial</h2>
+        <div id="tutorialContent">Combine elemental and utility cards for powerful combo attacks!</div>
+        <button id="nextButton">Next</button>
+    </div>
+    <div id="attackConfirmation" style="display: none;">
+        <h2>Do you want to attack?</h2>
+        <button id="yesButton">Yes</button>
+        <button id="noButton">No</button>
+    </div>
+    <div id="assignmentConfirmation" style="display: none;">
+        <h2>Skip card assignment and attack?</h2>
+        <button id="yesAssignButton">Yes</button>
+        <button id="noAssignButton">No</button>
+    </div>
+    <div id="gameOverMenu">
+        <h2 id="gameOverMessage"></h2>
+        <button id="newGameButton">New Game</button>
+    </div>
+    <div id="aStatsBox" style="display: none;">
+        <div class="card-column"><div style="width: 100px; height: 150px; background-color: white; display: flex; justify-content: center; align-items: center; font-size: 50px;">🧞</div></div>
+        <div class="stats-column"><p>Avatar: genie</p><p>HP: 3/7</p><p>Attack: 13</p><p>Defense: 2</p><p>Mana: 28</p><p>Luck: 5</p><button class="effect-button">🍀 (elemental)</button><button class="effect-button">🌟 (utility)</button></div>
+    </div>
+    <div id="cardInfoBox" style="display: none;">
+        <div class="card-column"></div>
+        <div class="stats-column"></div>
+    </div>
+    <div id="deckOptions" style="display: none;">
+        <h2>Deck Options</h2>
+        <button id="saveDeckButton">Save Deck</button>
+        <button id="loadDeckButton">Load Deck</button>
+        <input type="file" id="deckFileInput" style="display: none;" accept=".deck">
+    </div>
+    <div id="cardBrowser" style="display: none;">
+        <div id="cardGrid"></div>
+        <div id="cardDetails"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startMenu = document.getElementById('startMenu');
+        const readyButton = document.getElementById('readyButton');
+        const surrenderButton = document.getElementById('surrenderButton');
+        const tutorialButton = document.getElementById('tutorialButton');
+        const tutorialOverlay = document.getElementById('tutorialOverlay');
+        const tutorialContent = document.getElementById('tutorialContent');
+        const nextButton = document.getElementById('nextButton');
+        const attackConfirmation = document.getElementById('attackConfirmation');
+        const yesButton = document.getElementById('yesButton');
+        const noButton = document.getElementById('noButton');
+        const assignmentConfirmation = document.getElementById('assignmentConfirmation');
+        const yesAssignButton = document.getElementById('yesAssignButton');
+        const noAssignButton = document.getElementById('noAssignButton');
+        const gameOverMenu = document.getElementById('gameOverMenu');
+        const gameOverMessage = document.getElementById('gameOverMessage');
+        const newGameButton = document.getElementById('newGameButton');
+        const aStatsBox = document.getElementById('aStatsBox');
+        const cardInfoBox = document.getElementById('cardInfoBox');
+        const deckOptions = document.getElementById('deckOptions');
+        const saveDeckButton = document.getElementById('saveDeckButton');
+        const loadDeckButton = document.getElementById('loadDeckButton');
+        const deckFileInput = document.getElementById('deckFileInput');
+        const cardBrowserButton = document.getElementById('cardBrowserButton');
+        const cardBrowser = document.getElementById('cardBrowser');
+        const cardGrid = document.getElementById('cardGrid');
+        const cardDetails = document.getElementById('cardDetails');
+
+        let gameStarted = false;
+        let bgm;
+        let tutorialStep = 0;
+        let currentTurn = 'player';
+        let attackingAvatar = null;
+        let currentPhase = 1;
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if (gameStarted) {
+                drawGame();
+            }
+        });
+
+        readyButton.addEventListener('click', startGame);
+        surrenderButton.addEventListener('click', surrender);
+        tutorialButton.addEventListener('click', startTutorial);
+        nextButton.addEventListener('click', nextTutorialStep);
+        yesButton.addEventListener('click', () => confirmAttack(true));
+        noButton.addEventListener('click', () => confirmAttack(false));
+        yesAssignButton.addEventListener('click', () => skipAssignmentPhase(true));
+        noAssignButton.addEventListener('click', () => skipAssignmentPhase(false));
+        newGameButton.addEventListener('click', startNewGame);
+        saveDeckButton.addEventListener('click', saveDeck);
+        loadDeckButton.addEventListener('click', () => deckFileInput.click());
+        deckFileInput.addEventListener('change', (e) => loadDeck(e.target.files[0]));
+        cardBrowserButton.addEventListener('click', showCardBrowser);
+
+        function startGame() {
+            gameStarted = true;
+            startMenu.style.display = 'none';
+            initializeGame();
+            bgm = new Howl({
+                src: ['https://assets.caisual.com/games/zqfqt5j5yt3lzb0v/rpg_battle_bgm.webp'],
+                loop: true,
+                volume: 0.5
+            });
+            bgm.play();
+            if (!getCookie('tutorialCompleted')) {
+                startTutorial();
+            }
+            gameLoop();
+        }
+
+        function surrender() {
+            endGame("You surrendered!");
+        }
+
+        const emojis = {
+            elf: '🧝',
+            dwarf: '🧔',
+            wizard: '🧙',
+            fairy: '🧚',
+            vampire: '🧛',
+            merperson: '🧜',
+            genie: '🧞',
+            zombie: '🧟',
+            superhero: '🦸',
+            supervillain: '🦹',
+            fire: '🔥',
+            water: '💧',
+            earth: '🌿',
+            ice: '❄️',
+            lightning: '⚡',
+            darkness: '🌑',
+            radiant: '☀️',
+            luck: '🍀',
+            sword: '🗡️',
+            shield: '🛡️',
+            heal: '💖',
+            bow: '🏹',
+            wand: '🪄',
+            luckyStar: '🌟',
+            tombstone: '🪦',
+            thirdHand: '✋',
+            axe: '🪓',
+            hammer: '🔨',
+            dagger: '🔪',
+            staff: '🦯',
+            spear: '🥢',
+            mace: '🎚️',
+            crossbow: '🏹',
+            scythe: '🌙',
+            sling: '🧶',
+            boomerang: '🪃'
+        };
+
+        class Card {
+            constructor(type, emoji, effect) {
+                this.type = type;
+                this.emoji = emoji;
+                this.effect = effect;
+                this.x = 0;
+                this.y = 0;
+                this.width = 80;
+                this.height = 120;
+                this.selected = false;
+                this.rotation = 0;
+                this.scale = 1;
+                this.targetX = 0;
+                this.targetY = 0;
+                this.moving = false;
+                this.isLuckyStar = type === 'utility' && effect.type === 'luckyStar';
+                this.isThirdHand = type === 'utility' && effect.type === 'thirdHand';
+                this.isElementalWeapon = type === 'utility' && effect.isElementalWeapon;
+                this.isHeal = type === 'elemental' && effect.element === 'heal';
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+                ctx.rotate(this.rotation * Math.PI / 180);
+                ctx.scale(this.scale, this.scale);
+                
+                // Draw card back
+                if (this.type === 'elemental') {
+                    ctx.fillStyle = this.getLighterColor(this.effect.color);
+                } else if (this.type === 'utility') {
+                    if (this.isElementalWeapon) {
+                        ctx.fillStyle = '#ffebcd'; // Light orange for elemental weapons
+                    } else {
+                        ctx.fillStyle = '#d3d3d3'; // Light grey for normal utility cards
+                    }
+                } else {
+                    ctx.fillStyle = '#ffffff'; // White for avatar cards
+                }
+                ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+                
+                // Draw card face
+                if (this.isLuckyStar || this.isThirdHand) {
+                    const gradient = ctx.createLinearGradient(-this.width / 2, -this.height / 2, this.width / 2, this.height / 2);
+                    gradient.addColorStop(0, 'red');
+                    gradient.addColorStop(0.17, 'orange');
+                    gradient.addColorStop(0.33, 'yellow');
+                    gradient.addColorStop(0.5, 'green');
+                    gradient.addColorStop(0.67, 'blue');
+                    gradient.addColorStop(0.83, 'indigo');
+                    gradient.addColorStop(1, 'violet');
+                    ctx.fillStyle = gradient;
+                } else {
+                    ctx.fillStyle = this.selected ? '#4CAF50' : '#ffffff';
+                }
+                ctx.fillRect(-this.width / 2 + 5, -this.height / 2 + 5, this.width - 10, this.height - 10);
+                ctx.fillStyle = '#000000';
+                ctx.font = '40px Arial';
+                ctx.fillText(this.emoji, -20, 15);
+
+                // Draw elemental effect for elemental weapons
+                if (this.isElementalWeapon) {
+                    ctx.font = '20px Arial';
+                    ctx.fillText(this.effect.elementEmoji, this.width / 2 - 25, this.height / 2 - 25);
+                }
+
+                // Draw heal animation for heal cards
+                if (this.isHeal) {
+                    ctx.font = '20px Arial';
+                    ctx.fillStyle = this.getHealColor();
+                    ctx.fillText('❤️', this.width / 2 - 25, this.height / 2 - 25);
+                }
+
+                ctx.restore();
+            }
+
+            getLighterColor(color) {
+                const r = parseInt(color.slice(1, 3), 16);
+                const g = parseInt(color.slice(3, 5), 16);
+                const b = parseInt(color.slice(5, 7), 16);
+                return `rgb(${Math.min(r + 50, 255)}, ${Math.min(g + 50, 255)}, ${Math.min(b + 50, 255)})`;
+            }
+
+            getHealColor() {
+                const colors = ['red', 'blue', 'green', 'orange', 'yellow'];
+                const index = Math.floor(Date.now() / 500) % colors.length;
+                return colors[index];
+            }
+
+            isPointInside(x, y) {
+                const scaledWidth = this.width * this.scale;
+                const scaledHeight = this.height * this.scale;
+                return x >= this.x && x <= this.x + scaledWidth && y >= this.y && y <= this.y + scaledHeight;
+            }
+
+            moveTo(targetX, targetY, callback) {
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.moving = true;
+                
+                const animate = () => {
+                    const dx = this.targetX - this.x;
+                    const dy = this.targetY - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 1) {
+                        this.x += dx * 0.1;
+                        this.y += dy * 0.1;
+                        requestAnimationFrame(animate);
+                    } else {
+                        this.x = this.targetX;
+                        this.y = this.targetY;
+                        this.moving = false;
+                        if (callback) callback();
+                    }
+                };
+                
+                animate();
+            }
+        }
+
+        class Avatar {
+            constructor(race, emoji, isPlayer) {
+                this.race = race;
+                this.emoji = emoji;
+                this.isPlayer = isPlayer;
+                this.hp = Math.floor(Math.random() * 6) + 5; // 5-10 HP
+                this.maxHp = this.hp;
+                this.attack = Math.floor(Math.random() * 5) + 5; // 5-9 attack
+                this.defense = Math.floor(Math.random() * 5) + 1; // 1-5 defense
+                this.mana = Math.floor(Math.random() * 41) + 10; // 10-50 mana
+                this.luck = Math.floor(Math.random() * 10) + 1; // 1-10 luck
+                this.x = 0;
+                this.y = 0;
+                this.width = 100;
+                this.height = 150;
+                this.attachedCards = [];
+                this.rotation = 0;
+                this.scale = 1;
+                this.isDead = false;
+                this.luckBonus = 0;
+                this.luckBonusTurns = 0;
+                this.maxAttachedCards = 2;
+                this.hasThirdHand = false;
+                this.rarityIndicator = this.getRarityIndicator();
+            }
+
+            getRarityIndicator() {
+                if (this.hp >= 8 && this.attack >= 8) {
+                    return 'rarity-gold';
+                } else if ((this.hp >= 5 && this.hp <= 7 && this.attack >= 5 && this.attack <= 7) || 
+                           (this.luck >= 5 && this.hp >= 5)) {
+                    return 'rarity-green';
+                } else if (this.hp <= 4 && this.attack <= 4) {
+                    return 'rarity-grey';
+                } else if (this.luck === 10 && this.attack === 10) {
+                    return 'rarity-rainbow';
+                } else {
+                    return 'rarity-grey'; // Default to grey if no condition is met
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+                ctx.rotate(this.rotation * Math.PI / 180);
+                ctx.scale(this.scale, this.scale);
+                
+                if (this.isDead) {
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '50px Arial';
+                    ctx.fillText(emojis.tombstone, -25, 0);
+                } else {
+                    // Set card background color based on HP
+                    if (this.hp <= 2) {
+                        ctx.fillStyle = '#ff0000'; // Red
+                    } else if (this.hp <= 5) {
+                        ctx.fillStyle = '#ffa500'; // Orange
+                    } else {
+                        ctx.fillStyle = '#ffffff'; // White
+                    }
+                    ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+                    
+                    // Draw AvatarRarityIndicator
+                    ctx.fillStyle = this.rarityIndicator;
+                    ctx.fillRect(-this.width / 2, -this.height / 2, this.width, 8);
+                    
+                    ctx.fillStyle = '#000000';
+                    ctx.font = '50px Arial';
+                    ctx.fillText(this.emoji, -25, -this.height / 3);
+                    
+                    ctx.font = '14px Arial';
+                    ctx.fillText(`HP: ${this.hp}/${this.maxHp}`, -this.width / 2 + 5, 50);
+                    if (this.isPlayer) {
+                        ctx.fillText(`ATK: ${this.attack}`, -this.width / 2 + 5, 70);
+                    }
+                }
+
+                this.attachedCards.forEach((card, index) => {
+                    ctx.font = '20px Arial';
+                    ctx.fillText(card.emoji, -40 + 20 * index, -this.height / 2 - 10);
+
+                    if (card.isElementalWeapon) {
+                        ctx.font = '14px Arial';
+                        ctx.fillText(card.effect.elementEmoji, -40 + 20 * index, -this.height / 2 + 10);
+                    }
+                });
+
+                if (this.hasThirdHand) {
+                    ctx.font = '20px Arial';
+                    ctx.fillText(emojis.thirdHand, this.width / 2 - 25, this.height / 2 - 25);
+                }
+
+                ctx.restore();
+            }
+
+            isPointInside(x, y) {
+                const scaledWidth = this.width * this.scale;
+                const scaledHeight = this.height * this.scale;
+                return x >= this.x && x <= this.x + scaledWidth && y >= this.y && y <= this.y + scaledHeight;
+            }
+
+            attachCard(card) {
+                if (card.isHeal) {
+                    this.hp = Math.min(this.hp + 3, this.maxHp);
+                    this.showHealingAnimation();
+                    return true;
+                }
+
+                if (this.attachedCards.length < this.maxAttachedCards || card.isThirdHand) {
+                    this.attachedCards.push(card);
+                    this.applyCardEffect(card);
+                    return true;
+                }
+                return false;
+            }
+
+            applyCardEffect(card) {
+                switch (card.type) {
+                    case 'elemental':
+                        this.applyElementalEffect(card);
+                        break;
+                    case 'utility':
+                        this.applyUtilityEffect(card);
+                        break;
+                }
+            }
+
+            applyElementalEffect(card) {
+                switch (card.effect.element) {
+                    case 'fire':
+                        this.attack += 2;
+                        break;
+                    case 'water':
+                        this.defense += 1;
+                        break;
+                    case 'earth':
+                        this.hp = Math.min(this.hp + 2, this.maxHp);
+                        break;
+                    case 'ice':
+                        this.attack += 1;
+                        this.defense += 1;
+                        break;
+                    case 'lightning':
+                        this.attack += 3;
+                        break;
+                    case 'darkness':
+                        this.attack += 2;
+                        this.defense -= 1;
+                        break;
+                    case 'radiant':
+                        this.hp = Math.min(this.hp + 3, this.maxHp);
+                        this.defense += 1;
+                        break;
+                    case 'luck':
+                        this.luckBonus += 2;
+                        this.luckBonusTurns = 2;
+                        break;
+                }
+            }
+
+            applyUtilityEffect(card) {
+                switch (card.effect.type) {
+                    case 'sword':
+                        this.attack += 3;
+                        break;
+                    case 'shield':
+                        this.defense += 2;
+                        break;
+                    case 'heal':
+                        this.hp = Math.min(this.hp + 4, this.maxHp);
+                        break;
+                    case 'bow':
+                        this.attack += 2;
+                        break;
+                    case 'wand':
+                        this.mana += 20;
+                        break;
+                    case 'luckyStar':
+                        this.attack += 5;
+                        break;
+                    case 'thirdHand':
+                        this.maxAttachedCards += 1;
+                        this.hasThirdHand = true;
+                        break;
+                    case 'axe':
+                        this.attack += 4;
+                        break;
+                    case 'hammer':
+                        this.attack += 3;
+                        this.defense += 1;
+                        break;
+                    case 'dagger':
+                        this.attack += 2;
+                        this.luck += 1;
+                        break;
+                    case 'staff':
+                        this.attack += 2;
+                        this.mana += 10;
+                        break;
+                    case 'spear':
+                        this.attack += 3;
+                        this.defense += 1;
+                        break;
+                    case 'mace':
+                        this.attack += 4;
+                        this.defense -= 1;
+                        break;
+                    case 'crossbow':
+                        this.attack += 3;
+                        this.luck += 1;
+                        break;
+                    case 'scythe':
+                        this.attack += 5;
+                        this.defense -= 2;
+                        break;
+                    case 'sling':
+                        this.attack += 1;
+                        this.luck += 2;
+                        break;
+                    case 'boomerang':
+                        this.attack += 2;
+                        this.defense += 1;
+                        this.luck += 1;
+                        break;
+                }
+
+                // Apply additional effects for elemental weapons
+                if (card.isElementalWeapon) {
+                    switch (card.effect.element) {
+                        case 'fire':
+                            this.attack += 1;
+                            break;
+                        case 'water':this.defense += 1;
+                            break;
+                        case 'earth':
+                            this.hp = Math.min(this.hp + 1, this.maxHp);
+                            break;
+                        case 'ice':
+                            this.attack += 1;
+                            break;
+                        case 'lightning':
+                            this.attack += 2;
+                            break;
+                        case 'darkness':
+                            this.attack += 1;
+                            this.luck += 1;
+                            break;
+                        case 'radiant':
+                            this.defense += 1;
+                            this.hp = Math.min(this.hp + 1, this.maxHp);
+                            break;
+                        case 'luck':
+                            this.luck += 1;
+                            break;
+                    }
+                }
+            }
+
+            removeEffect(effectIndex) {
+                if (effectIndex >= 0 && effectIndex < this.attachedCards.length) {
+                    const removedCard = this.attachedCards.splice(effectIndex, 1)[0];
+                    this.revertCardEffect(removedCard);
+                    return removedCard;
+                }
+                return null;
+            }
+
+            revertCardEffect(card) {
+                switch (card.type) {
+                    case 'elemental':
+                        this.revertElementalEffect(card);
+                        break;
+                    case 'utility':
+                        this.revertUtilityEffect(card);
+                        break;
+                }
+            }
+
+            revertElementalEffect(card) {
+                switch (card.effect.element) {
+                    case 'fire':
+                        this.attack -= 2;
+                        break;
+                    case 'water':
+                        this.defense -= 1;
+                        break;
+                    case 'earth':
+                        // No reversion needed for HP boost
+                        break;
+                    case 'ice':
+                        this.attack -= 1;
+                        this.defensethis.defense -= 1;
+                        break;
+                    case 'lightning':
+                        this.attack -= 3;
+                        break;
+                    case 'darkness':
+                        this.attack -= 2;
+                        this.defense += 1;
+                        break;
+                    case 'radiant':
+                        this.defense -= 1;
+                        break;
+                    case 'luck':
+                        this.luckBonus -= 2;
+                        this.luckBonusTurns = 0;
+                        break;
+                }
+            }
+
+            revertUtilityEffect(card) {
+                switch (card.effect.type) {
+                    case 'sword':
+                        this.attack -= 3;
+                        break;
+                    case 'shield':
+                        this.defense -= 2;
+                        break;
+                    case 'heal':
+                        // No reversion needed for healing
+                        break;
+                    case 'bow':
+                        this.attack -= 2;
+                        break;
+                    case 'wand':
+                        this.mana -= 20;
+                        break;
+                    case 'luckyStar':
+                        this.attack -= 5;
+                        break;
+                    case 'thirdHand':
+                        this.maxAttachedCards -= 1;
+                        this.hasThirdHand = false;
+                        break;
+                    case 'axe':
+                        this.attack -= 4;
+                        break;
+                    case 'hammer':
+                        this.attack -= 3;
+                        this.defense -= 1;
+                        break;
+                    case 'dagger':
+                        this.attack-= 2;
+                        this.luck -= 1;
+                        break;
+                    case 'staff':
+                        this.attack -= 2;
+                        this.mana -= 10;
+                        break;
+                    case 'spear':
+                        this.attack -= 3;
+                        this.defense -= 1;
+                        break;
+                    case 'mace':
+                        this.attack -= 4;
+                        this.defense += 1;
+                        break;
+                    case 'crossbow':
+                        this.attack -= 3;
+                        this.luck -= 1;
+                        break;
+                    case 'scythe':
+                        this.attack -= 5;
+                        this.defense += 2;
+                        break;
+                    case 'sling':
+                        this.attack -= 1;
+                        this.luck -= 2;
+                        break;
+                    case 'boomerang':
+                        this.attack -= 2;
+                        this.defense -= 1;
+                        this.luck -= 1;
+                        break;
+                }
+
+                // Revert additional effects for elemental weapons
+                if (card.isElementalWeapon) {
+                    switch (card.effect.element) {
+                        case 'fire':
+                            this.attack -= 1;
+                            break;
+                        case 'water':
+                            this.defense -= 1;
+                            break;
+                        case 'earth':
+                            // No reversion needed for HP boost
+                            break;
+                        case 'ice':
+                            this.attack -= 1;
+                            break;
+                        case 'lightning':
+                            this.attack -= 2;
+                            break;
+                        case 'darkness':
+                            this.attack -= 1;
+                            this.luck -= 1;
+                            break;
+                        case 'radiant':
+                            this.defense -= 1;
+                            break;
+                        case 'luck':
+                            this.luck -= 1;
+                            break;
+                    }
+                }
+            }
+
+            updateLuckBonus() {
+                if (this.luckBonusTurns > 0) {
+                    this.luckBonusTurns--;
+                    if (this.luckBonusTurns === 0) {
+                        this.luckBonus = 0;
+                    }
+                }
+            }
+
+            getAttackAnimation(target) {
+                const elementalCard = this.attachedCards.find(card => card.type === 'elemental');
+                const utilityCard = this.attachedCards.find(card => card.type === 'utility');
+                
+                let animationEmoji = '💥';
+                let soundEffect = 'attack_sound.webp';
+                let animationFunction = null;
+                
+                if (elementalCard && utilityCard) {
+                    const combo = `${elementalCard.effect.element}_${utilityCard.effect.type}`;
+                    switch (combo) {
+                        case 'fire_sword':
+                            animationEmoji = '🔥🗡️';
+                            soundEffect = 'fire_sword_attack.webp';
+                            animationFunction = (x, y) => {
+                                ctx.font = '40px Arial';
+                                ctx.fillText('🔥🗡️', x, y);
+                                y += 5;
+                                return y < canvas.height;
+                            };
+                            break;
+                        case 'ice_bow':
+                            animationEmoji = '❄️🏹';
+                            soundEffect = 'ice_bow_attack.webp';
+                            animationFunction = (x, y) => {
+                                ctx.font = '40px Arial';
+                                ctx.fillText('❄️🏹', x, y);
+                                x += 10;
+                                return x < canvas.width;
+                            };
+                            break;
+                        case 'lightning_wand':
+                            animationEmoji = '⚡🪄';
+                            soundEffect = 'lightning_wand_attack.webp';
+                            animationFunction = (x, y) => {
+                                ctx.font = '40px Arial';
+                                ctx.fillStyle = Math.random() > 0.5 ? 'yellow' : 'white';
+                                ctx.fillText('⚡🪄', x, y);
+                                return true;
+                            };
+                            break;
+                        case 'water_shield':
+                            animationEmoji = '💧🛡️';
+                            soundEffect = 'water_shield_attack.webp';
+                            animationFunction = (x, y, scale = 1) => {
+                                ctx.font = `${40 * scale}px Arial`;
+                                ctx.fillText('💧🛡️', x, y);
+                                scale += 0.1;
+                                return scale < 2;
+                            };
+                            break;
+                        case 'earth_sword':
+                            animationEmoji = '🌿🗡️';
+                            soundEffect = 'earth_sword_attack.webp';
+                            animationFunction = (x, y, rotation = 0) => {
+                                ctx.save();
+                                ctx.translate(x, y);
+                                ctx.rotate(rotation);
+                                ctx.font = '40px Arial';
+                                ctx.fillText('🌿🗡️', 0, 0);
+                                ctx.restore();
+                                rotation += 0.1;
+                                return rotation < Math.PI * 2;
+                            };
+                            break;
+                        default:
+                            animationEmoji = '💥';
+                            soundEffect = 'default_attack.webp';
+                            animationFunction = (x, y) => {
+                                ctx.font = '40px Arial';
+                                ctx.fillText('💥', x, y);
+                                return false;
+                            };
+                    }
+                } else if (elementalCard) {
+                    animationEmoji = elementalCard.emoji;
+                    soundEffect = `${elementalCard.effect.element}_attack.webp`;
+                    switch (elementalCard.effect.element) {
+                        case 'fire':
+                            animationFunction = (x, y) => {
+                                ctx.font = '40px Arial';
+                                ctx.fillText('🔥', x + Math.random() * 20 - 10, y);
+                                y += 5;
+                                return y < canvas.height;
+                            };
+                            break;
+                        case 'water':
+                            animationFunction = (x, y, scale = 1) => {
+                                ctx.font = `${40 * scale}px Arial`;
+                                ctx.fillText('💧', x, y);
+                                scale += 0.1;
+                                return scale < 2;
+                            };
+                            break;
+                        case 'earth':
+                            animationFunction = (x, y) => {
+                                ctx.font = '40px Arial';
+                                ctx.fillText('🌿', x, y);
+                                x += Math.random() * 10 - 5;
+                                y += Math.random() * 10 - 5;
+                                return true;
+                            };
+                            break;
+                        case 'ice':
+                            animationFunction = (x, y) => {
+                                ctx.font = '40px Arial';
+                                ctx.fillText('❄️', x, y);
+                                x += 10;
+                                return x < canvas.width;
+                            };
+                            break;
+                        case 'lightning':
+                            animationFunction = (x, y) => {
+                                ctx.font = '40px Arial';
+                                ctx.fillStyle = Math.random() > 0.5 ? 'yellow' : 'white';
+                                ctx.fillText('⚡', x, y);
+                                return true;
+                            };
+                            break;
+                        default:
+                            animationFunction = (x, y) => {
+                                ctx.font = '40px Arial';
+                                ctx.fillText(animationEmoji, x, y);
+                                return false;
+                            };
+                    }
+                } else if (utilityCard) {
+                    animationEmoji = utilityCard.emoji;
+                    soundEffect = `${utilityCard.effect.type}_attack.webp`;
+                    animationFunction = (x, y, rotation = 0) => {
+                        ctx.save();
+                        ctx.translate(x, y);
+                        ctx.rotate(rotation);
+                        ctx.font = '40px Arial';
+                        ctx.fillText(animationEmoji, 0, 0);
+                        ctx.restore();
+                        rotation += 0.1;
+                        return rotation < Math.PI * 2;
+                    };
+                }
+                
+                return {
+                    emoji: animationEmoji,
+                    sound: soundEffect,
+                    animate: (callback) => {
+                        const startX = this.x + this.width / 2;
+                        const startY = this.y + this.height / 2;
+                        const endX = target.x + target.width / 2;
+                        const endY = target.y + target.height / 2;
+                        
+                        let progress = 0;
+                        let additionalParam = 0;
+                        const animate = () => {
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            drawGame();
+                            
+                            const x = startX + (endX - startX) * progress;
+                            const y = startY + (endY - startY) * progress;
+                            
+                            if (animationFunction(x, y, additionalParam)) {
+                                progress += 0.05;
+                                additionalParam += 0.1;
+                                if (progress < 1) {
+                                    requestAnimationFrame(animate);
+                                } else {
+                                    callback();
+                                }
+                            } else {
+                                callback();
+                            }
+                        };
+                        animate();
+                    }
+                };
+            }
+
+            shake() {
+                const originalX = this.x;
+                let shakeCount = 0;
+                const shakeAnimation = () => {
+                    if (shakeCount < 10) {
+                        this.x = originalX + (shakeCount % 2 === 0 ? 5 : -5);
+                        shakeCount++;
+                        requestAnimationFrame(shakeAnimation);
+                    } else {
+                        this.x = originalX;
+                    }
+                };
+                shakeAnimation();
+            }
+
+            showHealingAnimation() {
+                const healingHeart = document.createElement('div');
+                healingHeart.textContent = '❤️';
+                healingHeart.className = 'healing-heart';
+                healingHeart.style.position = 'absolute';
+                healingHeart.style.left = `${this.x + this.width / 2}px`;
+                healingHeart.style.top = `${this.y}px`;
+                healingHeart.style.fontSize = '40px';
+                document.body.appendChild(healingHeart);
+
+                setTimeout(() => {
+                    healingHeart.remove();
+                }, 2000);
+            }
+
+            showDamageAnimation(damage) {
+                const damageText = document.createElement('div');
+                damageText.textContent = `-${damage}`;
+                damageText.className = 'damage-text';
+                damageText.style.left = `${this.x + this.width / 2}px`;
+                damageText.style.top = this.isPlayer ? `${this.y}px` : `${this.y + this.height}px`;
+                document.body.appendChild(damageText);
+
+                setTimeout(() => {
+                    damageText.remove();
+                }, 1000);
+            }
+        }
+
+        let playerDeck = [];
+        let playerHand = [];
+        let opponentHand = [];
+        let playerAvatars = [];
+        let opponentAvatars = [];
+        let selectedCard = null;
+
+        function initializeGame() {
+            createPlayerDeck();
+            createAvatars();
+            positionElements();
+            dealInitialHands();
+            currentPhase = 1;
+            currentTurn = 'player';
+            updateSurrenderButtonVisibility();
+        }
+
+        function createPlayerDeck() {
+            const elementalCards = [
+                { element: 'fire', color: '#FF4500' },
+                { element: 'water', color: '#1E90FF' },
+                { element: 'earth', color: '#8B4513' },
+                { element: 'ice', color: '#E0FFFF' },
+                { element: 'lightning', color: '#FFD700' },
+                { element: 'darkness', color: '#4B0082' },
+                { element: 'radiant', color: '#FFFF00' },
+                { element: 'luck', color: '#32CD32' },
+                { element: 'heal', color: '#FF69B4' }
+            ];
+            const utilityCards = [
+                { type: 'sword' },
+                { type: 'shield' },
+                { type: 'heal' },
+                { type: 'bow' },
+                { type: 'wand' },
+                { type: 'axe' },
+                { type: 'hammer' },
+                { type: 'dagger' },
+                { type: 'staff' },
+                { type: 'spear' },
+                { type: 'mace' },
+                { type: 'crossbow' },
+                { type: 'scythe' },
+                { type: 'sling' },
+                { type: 'boomerang' }
+            ];
+            const elementalWeapons = [
+                { type: 'fire_sword', element: 'fire', weaponType: 'sword', elementEmoji: emojis.fire },
+                { type: 'ice_bow', element: 'ice', weaponType: 'bow', elementEmoji: emojis.ice },
+                { type: 'lightning_wand', element: 'lightning', weaponType: 'wand', elementEmoji: emojis.lightning },
+                { type: 'water_shield', element: 'water', weaponType: 'shield', elementEmoji: emojis.water },
+                { type: 'earth_axe', element: 'earth', weaponType: 'axe', elementEmoji: emojis.earth },
+                { type: 'darkness_dagger', element: 'darkness', weaponType: 'dagger', elementEmoji: emojis.darkness },
+                { type: 'radiant_staff', element: 'radiant', weaponType: 'staff', elementEmoji: emojis.radiant },
+                { type: 'luck_boomerang', element: 'luck', weaponType: 'boomerang', elementEmoji: emojis.luck },
+                { type: 'fire_mace', element: 'fire', weaponType: 'mace', elementEmoji: emojis.fire },
+                { type: 'ice_spear', element: 'ice', weaponType: 'spear', elementEmoji: emojis.ice }
+            ];
+
+            for (let i = 0; i < 40; i++) {
+                if (Math.random() < 0.025) { // 1 in 40 chance for Lucky Star
+                    playerDeck.push(new Card('utility', emojis.luckyStar, { type: 'luckyStar' }));
+                } else if (Math.random() < 0.025) { // 1 in 40 chance for Third Hand
+                    playerDeck.push(new Card('utility', emojis.thirdHand, { type: 'thirdHand' }));
+                } else if (Math.random() < 0.15) { // 15% chance for elemental weapon
+                    const elementalWeapon = elementalWeapons[Math.floor(Math.random() * elementalWeapons.length)];
+                    playerDeck.push(new Card('utility', emojis[elementalWeapon.weaponType], {
+                        type: elementalWeapon.weaponType,
+                        element: elementalWeapon.element,
+                        elementEmoji: elementalWeapon.elementEmoji,
+                        isElementalWeapon: true
+                    }));
+                } else if (Math.random() < 0.7) {
+                    const elementalEffect = elementalCards[Math.floor(Math.random() * elementalCards.length)];
+                    playerDeck.push(new Card('elemental', emojis[elementalEffect.element], elementalEffect));
+                } else {
+                    const utilityEffect = utilityCards[Math.floor(Math.random() * utilityCards.length)];
+                    playerDeck.push(new Card('utility', emojis[utilityEffect.type], utilityEffect));
+                }
+            }
+        }
+
+        function dealInitialHands() {
+            for (let i = 0; i < 4; i++) {
+                dealCard(playerHand);
+                dealCard(opponentHand);
+            }
+        }
+
+        function dealCard(hand) {
+            if (hand.length < 4 && playerDeck.length > 0) {
+                const card = playerDeck.pop();
+                card.x = canvas.width / 2;
+                card.y = canvas.height + card.height;
+                card.scale = 0.1;
+                hand.push(card);
+
+                const dealSound = new Howl({
+                    src: ['https://assets.caisual.com/games/zqfqt5j5yt3lzb0v/card_deal_sound.webp'],
+                    volume: 0.5
+                });
+                dealSound.play();
+
+                card.moveTo(
+                    canvas.width / 2 - 1.5 * card.width + hand.length * (card.width + 10),
+                    hand === playerHand ? canvas.height - card.height - 10 : 10,
+                    () => {
+                        card.scale = 1;
+                        positionElements();
+                    }
+                );
+            }
+        }
+
+        function createAvatars() {
+            const avatarTypes = [
+                { race: 'elf', emoji: emojis.elf },
+                { race: 'dwarf', emoji: emojis.dwarf },
+                { race: 'wizard', emoji: emojis.wizard },
+                { race: 'fairy', emoji: emojis.fairy },
+                { race: 'vampire', emoji: emojis.vampire },
+                { race: 'merperson', emoji: emojis.merperson },
+                { race: 'genie', emoji: emojis.genie },
+                { race: 'zombie', emoji: emojis.zombie },
+                { race: 'superhero', emoji: emojis.superhero },
+                { race: 'supervillain', emoji: emojis.supervillain }
+            ];
+
+            for (let i = 0; i < 3; i++) {
+                const playerAvatarType = avatarTypes[Math.floor(Math.random() * avatarTypes.length)];
+                playerAvatars.push(new Avatar(playerAvatarType.race, playerAvatarType.emoji, true));
+
+                const opponentAvatarType = avatarTypes[Math.floor(Math.random() * avatarTypes.length)];
+                opponentAvatars.push(new Avatar(opponentAvatarType.race, opponentAvatarType.emoji, false));
+            }
+        }
+
+        function positionElements() {
+            const padding = 10;
+            const avatarSpacing = canvas.width / 4;
+
+            playerHand.forEach((card, index) => {
+                card.x = canvas.width / 2 - 1.5 * card.width + index * (card.width + 10);
+                card.y = canvas.height - card.height - 10;
+            });
+
+            playerAvatars.forEach((avatar, index) => {
+                avatar.x = avatarSpacing * (index + 1) - avatar.width / 2;
+                avatar.y = canvas.height - 2 * avatar.height - padding;
+            });
+
+            opponentAvatars.forEach((avatar, index) => {
+                avatar.x = avatarSpacing * (index + 1) - avatar.width / 2;
+                avatar.y = padding + avatar.height;
+            });
+
+            // Position deck placeholder
+            if (playerHand.length > 0) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(10, canvas.height - playerHand[0].height - 10, 80, 120);
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(10, canvas.height - playerHand[0].height - 10, 80, 120);
+                ctx.fillStyle = '#000000';
+                ctx.font = '20px Arial';
+                ctx.fillText('Deck', 25, canvas.height - playerHand[0].height + 50);
+                ctx.fillText(`(${playerDeck.length}/40)`, 15, canvas.height - playerHand[0].height + 80);
+            }
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw deck placeholder
+            if (playerHand.length > 0) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(10, canvas.height - playerHand[0].height - 10, 80, 120);
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(10, canvas.height - playerHand[0].height - 10, 80, 120);
+                ctx.fillStyle = '#000000';
+                ctx.font = '20px Arial';
+                ctx.fillText('Deck', 25, canvas.height - playerHand[0].height + 50);
+                ctx.fillText(`(${playerDeck.length}/40)`, 15, canvas.height - playerHand[0].height + 80);
+            }
+
+            playerHand.forEach(card => card.draw());
+            playerAvatars.forEach(avatar => avatar.draw());
+            opponentAvatars.forEach(avatar => avatar.draw());
+
+            if (selectedCard) {
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(selectedCard.x, selectedCard.y, selectedCard.width, selectedCard.height);
+            }
+
+            // Draw turn and phase indicator
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '24px Arial';
+            ctx.fillText(`Current Turn: ${currentTurn}`, 20, 30);
+            ctx.fillText(`Phase: ${currentPhase}`, 20, 60);
+        }
+
+        function gameLoop() {
+            drawGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        canvas.addEventListener('click', handleClick);
+        canvas.addEventListener('contextmenu', handleRightClick);
+
+        function handleClick(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            if (currentTurn === 'player') {
+                playerHand.forEach(card => {
+                    if (card.isPointInside(x, y)) {
+                        if (selectedCard === card) {
+                            selectedCard.selected = false;
+                            selectedCard = null;
+                        } else {
+                            if (selectedCard) selectedCard.selected = false;
+                            card.selected = true;
+                            selectedCard = card;
+                        }
+                    }
+                });
+
+                playerAvatars.forEach(avatar => {
+                    if (avatar.isPointInside(x, y) && !avatar.isDead) {
+                        if (selectedCard && currentPhase === 1) {
+                            if (avatar.attachCard(selectedCard)) {
+                                const index = playerHand.indexOf(selectedCard);
+                                if (index > -1) {
+                                    playerHand.splice(index, 1);
+                                }
+                                selectedCard = null;
+                                if (avatar.attachedCards.length === avatar.maxAttachedCards) {
+                                    currentPhase = 2;
+                                }
+                                positionElements();
+                            } else {
+                                avatar.shake();
+                            }
+                        } else if (currentPhase === 1 && !selectedCard) {
+                            showAssignmentConfirmation();
+                        } else if (currentPhase === 2 && !attackingAvatar) {
+                            avatar.rotation = 15;
+                            attackingAvatar = avatar;
+                            showAttackConfirmation();
+                        }
+                    }
+                });
+            }
+        }
+
+        function handleRightClick(event) {
+            event.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            playerAvatars.concat(opponentAvatars).forEach(avatar => {
+                if (avatar.isPointInside(x, y)) {
+                    showAStatsBox(avatar);
+                }
+            });
+
+            playerHand.forEach(card => {
+                if (card.isPointInside(x, y)) {
+                    showCardInfoBox(card);
+                }
+            });
+
+            // Check if the deck was right-clicked
+            if (x >= 10 && x <= 90 && y >= canvas.height - 130 && y <= canvas.height - 10) {
+                showDeckOptions();
+            }
+        }
+
+        function showAttackConfirmation() {
+            attackConfirmation.style.display = 'block';
+        }
+
+        function confirmAttack(confirmed) {
+            attackConfirmation.style.display = 'none';
+            if (confirmed && attackingAvatar) {
+                const target = getRandomAvatar(opponentAvatars.filter(avatar => !avatar.isDead));
+                if (target) {
+                    performAttack(attackingAvatar, target);
+                } else {
+                    endTurn();
+                }
+            } else {
+                if (attackingAvatar) {
+                    attackingAvatar.rotation = 0;
+                }
+                attackingAvatar = null;
+            }
+        }
+
+        function showAssignmentConfirmation() {
+            assignmentConfirmation.style.display = 'block';
+        }
+
+        function skipAssignmentPhase(skip) {
+            assignmentConfirmation.style.display = 'none';
+            if (skip) {
+                currentPhase = 2;
+            }
+        }
+
+        function performAttack(attacker, defender) {
+            const hitChance = Math.floor(Math.random() * 10) + 1;
+            if (attacker.luck + attacker.luckBonus >= hitChance) {
+                const rawDamage = attacker.attack;
+                const blockedDamage = Math.floor(defender.defense * 0.5);
+                const damage = Math.max(0, rawDamage - blockedDamage);
+                const attackAnimation = attacker.getAttackAnimation(defender);
+                
+                const attackSound = new Howl({
+                    src: [`https://assets.caisual.com/games/zqfqt5j5yt3lzb0v/${attackAnimation.sound}`],
+                    volume: 0.5
+                });
+                attackSound.play();
+
+                attackAnimation.animate(() => {
+                    defender.hp = Math.max(0, defender.hp - damage);
+                    defender.showDamageAnimation(damage);
+
+                    if (defender.hp === 0) {
+                        defender.isDead = true;
+                        flipCard(defender);
+                    }
+
+                    checkGameEnd();
+                    if (gameStarted) {
+                        endTurn();
+                    }
+                });
+            } else {
+                const missSound = new Howl({
+                    src: ['https://assets.caisual.com/games/zqfqt5j5yt3lzb0v/attack_miss_sound.webp'],
+                    volume: 0.5
+                });
+                missSound.play();
+
+                ctx.font = '40px Arial';
+                ctx.fillStyle = '#ff0000';
+                ctx.fillText('MISS!', defender.x + defender.width / 2, defender.y - 20);
+
+                setTimeout(() => {
+                    endTurn();
+                }, 1000);
+            }
+
+            if (attackingAvatar) {
+                attackingAvatar.rotation = 0;
+            }
+            attackingAvatar = null;
+        }
+
+        function flipCard(avatar) {
+            avatar.rotation = 0;
+            const flipAnimation = (progress) => {avatar.scale = Math.abs(Math.cos(progress * Math.PI));
+                if (progress >= 1) {
+                    avatar.isDead = true;
+                } else {
+                    requestAnimationFrame(() => flipAnimation(progress + 0.1));
+                }
+            };
+            flipAnimation(0);
+        }
+
+        function getRandomAvatar(avatars) {
+            return avatars[Math.floor(Math.random() * avatars.length)];
+        }
+
+        function endTurn() {
+            currentTurn = currentTurn === 'player' ? 'opponent' : 'player';
+            currentPhase = 1;
+            updateSurrenderButtonVisibility();
+
+            playerAvatars.concat(opponentAvatars).forEach(avatar => {
+                avatar.updateLuckBonus();
+            });
+
+            // Remove any remaining hand cards and shuffle them back into the deck
+            if (currentTurn === 'player') {
+                while (playerHand.length > 0) {
+                    playerDeck.push(playerHand.pop());
+                }
+                shuffleDeck(playerDeck);
+                dealInitialHands();
+            } else {
+                while (opponentHand.length > 0) {
+                    playerDeck.push(opponentHand.pop());
+                }
+                shuffleDeck(playerDeck);
+                dealInitialHands();
+                setTimeout(opponentTurn, 1000);
+            }
+
+            // Reshuffle if deck is low
+            if (playerDeck.length <= 3) {
+                const usedCards = playerAvatars.concat(opponentAvatars).flatMap(avatar => avatar.attachedCards);
+                playerDeck = playerDeck.concat(usedCards);
+                playerAvatars.concat(opponentAvatars).forEach(avatar => avatar.attachedCards = []);
+                shuffleDeck(playerDeck);
+            }
+        }
+
+        function shuffleDeck(deck) {
+            for (let i = deck.length - 1; i> 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+        }
+
+        function opponentTurn() {
+            // Phase 1: Assign cards
+            for (let i = 0; i < 2; i++) {
+                if (opponentHand.length > 0) {
+                    const card = opponentHand.pop();
+                    const avatar = getRandomAvatar(opponentAvatars.filter(a => !a.isDead && a.attachedCards.length < a.maxAttachedCards));
+                    if (avatar) {
+                        avatar.attachCard(card);
+                    } else {
+                        playerDeck.push(card);
+                    }
+                }
+            }
+
+            // Phase 2: Attack
+            const attacker = getRandomAvatar(opponentAvatars.filter(a => !a.isDead));
+            const defender = getRandomAvatar(playerAvatars.filter(a => !a.isDead));
+            if (attacker && defender) {
+                performAttack(attacker, defender);
+            } else {
+                endTurn();
+            }
+        }
+
+        function checkGameEnd() {
+            if (playerAvatars.every(avatar => avatar.isDead)) {
+                endGame("You lost!");
+            } else if (opponentAvatars.every(avatar => avatar.isDead)) {
+                endGame("You won!");
+            }
+        }
+
+        function endGame(message) {
+            gameStarted = false;
+            gameOverMessage.textContent = message;
+            gameOverMenu.style.display = 'block';
+            bgm.stop();
+
+            if (message === "You won!") {
+                showConfetti();
+            } else if (message === "You lost!") {
+                showSkull();
+            }
+        }
+
+        function showConfetti() {
+            for (let i = 0; i < 100; i++) {
+                createConfettiPiece();
+            }
+        }
+
+        function createConfettiPiece() {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.left = `${Math.random() * 100}vw`;
+            confetti.style.top = `${Math.random() * 100}vh`;
+            confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+            confetti.style.setProperty('--tx', `${(Math.random() - 0.5) * 300}px`);
+            confetti.style.setProperty('--ty', `${Math.random() * 300 + 300}px`);
+            document.body.appendChild(confetti);
+            setTimeout(() => confetti.remove(), 2000);
+        }
+
+        function showSkull() {
+            const skull = document.createElement('div');
+            skull.textContent = '💀';
+            skull.style.position = 'absolute';
+            skull.style.left = '50%';
+            skull.style.top = '50%';
+            skull.style.transform = 'translate(-50%, -50%)';
+            skull.style.fontSize = '100px';
+            document.body.appendChild(skull);
+            setTimeout(() => skull.remove(), 2000);
+        }
+
+        function startNewGame() {
+            gameOverMenu.style.display = 'none';
+            playerDeck = [];
+            playerHand = [];
+            opponentHand = [];
+            playerAvatars = [];
+            opponentAvatars = [];
+            selectedCard = null;
+            currentTurn = 'player';
+            attackingAvatar = null;
+            startGame();
+        }
+
+        function showAStatsBox(avatar) {
+            const cardColumn = aStatsBox.querySelector('.card-column');
+            const statsColumn = aStatsBox.querySelector('.stats-column');
+
+            cardColumn.innerHTML = '';
+            statsColumn.innerHTML = '';
+
+            const avatarCard = document.createElement('div');
+            avatarCard.style.width = '100px';
+            avatarCard.style.height = '150px';
+            avatarCard.style.backgroundColor = 'white';
+            avatarCard.style.display = 'flex';
+            avatarCard.style.justifyContent = 'center';
+            avatarCard.style.alignItems = 'center';
+            avatarCard.style.fontSize = '50px';
+            avatarCard.textContent = avatar.emoji;
+
+            cardColumn.appendChild(avatarCard);
+
+            const stats = [
+                `Avatar: ${avatar.race}`,
+                `HP: ${avatar.hp}/${avatar.maxHp}`,
+                `Attack: ${avatar.attack}`,
+                `Defense: ${avatar.defense}`,
+                `Mana: ${avatar.mana}`,
+                `Luck: ${avatar.luck + avatar.luckBonus}`
+            ];
+
+            stats.forEach(stat => {
+                const statElement = document.createElement('p');
+                statElement.textContent = stat.charAt(0).toUpperCase() + stat.slice(1);
+                statsColumn.appendChild(statElement);
+            });
+
+            avatar.attachedCards.forEach((card, index) => {
+                const attachedCardElement = document.createElement('button');
+                attachedCardElement.className = 'effect-button';
+                attachedCardElement.textContent = `${card.emoji} (${card.type})`;
+                attachedCardElement.onclick = () => removeEffect(avatar, index);
+                statsColumn.appendChild(attachedCardElement);
+            });
+
+            aStatsBox.style.display = 'grid';
+        }
+
+        function removeEffect(avatar, effectIndex) {
+            const removedCard = avatar.removeEffect(effectIndex);
+            if (removedCard) {
+                playerDeck.push(removedCard);
+                shuffleDeck(playerDeck);
+                showAStatsBox(avatar);
+            }
+        }
+
+        function showCardInfoBox(card) {
+            const cardColumn = cardInfoBox.querySelector('.card-column');
+            const statsColumn = cardInfoBox.querySelector('.stats-column');
+
+            cardColumn.innerHTML = '';
+            statsColumn.innerHTML = '';
+
+            const cardDisplay = document.createElement('div');
+            cardDisplay.style.width = '80px';
+            cardDisplay.style.height = '120px';
+            cardDisplay.style.backgroundColor = 'white';
+            cardDisplay.style.display = 'flex';
+            cardDisplay.style.justifyContent = 'center';
+            cardDisplay.style.alignItems = 'center';
+            cardDisplay.style.fontSize = '40px';
+            cardDisplay.textContent = card.emoji;
+
+            if (card.isLuckyStar) {
+                cardDisplay.classList.add('lucky-star');
+            }
+
+            if (card.isElementalWeapon) {
+                cardDisplay.classList.add('elemental-weapon');
+                const elementalEmoji = document.createElement('span');
+                elementalEmoji.style.position = 'absolute';
+                elementalEmoji.style.bottom = '5px';
+                elementalEmoji.style.right = '5px';
+                elementalEmoji.style.fontSize = '20px';
+                elementalEmoji.textContent = card.effect.elementEmoji;
+                cardDisplay.appendChild(elementalEmoji);
+            }
+
+            cardColumn.appendChild(cardDisplay);
+
+            const cardInfo = [
+                `Type: ${card.type}`,
+                `Effect: ${card.type === 'elemental' ? card.effect.element : card.effect.type}`
+            ];
+
+            if (card.isElementalWeapon) {
+                cardInfo.push(`Element: ${card.effect.element}`);
+            }
+
+            cardInfo.forEach(info => {
+                const infoElement = document.createElement('p');
+                infoElement.textContent = info.charAt(0).toUpperCase() + info.slice(1);
+                statsColumn.appendChild(infoElement);
+            });
+
+            cardInfoBox.style.display = 'grid';
+        }
+
+        function startTutorial() {
+            tutorialOverlay.style.display = 'block';
+            tutorialStep = 0;
+            nextTutorialStep();
+        }
+
+        function nextTutorialStep() {
+            const tutorialSteps = [
+                "Welcome to Emoji RPG Battle! Let's go through the basics.",
+                "Your avatar cards are at the bottom. They represent your characters in battle.",
+                "Your hand of cards is below your avatars. These are elemental and utility cards.",
+                "Click on a card in your hand to select it, then click on an avatar to attach it.",
+                "You can attach up to 2 cards per avatar (3 with the Third Hand card).",
+                "After assigning cards, click on an avatar to attack. Attacks are based on luck.",
+                "Combine elemental and utility cards for powerful combo attacks!",
+                "Right-click or long-press avatars and cards for more information.",
+                "The game ends when all avatars on one side are defeated.",
+                "That's it! Good luck and have fun!"
+            ];
+
+            if (tutorialStep < tutorialSteps.length) {
+                tutorialContent.textContent = tutorialSteps[tutorialStep];
+                tutorialStep++;
+            } else {
+                tutorialOverlay.style.display = 'none';
+                setCookie('tutorialCompleted', 'true', 365);
+            }
+        }
+
+        canvas.addEventListener('mousedown', handleLongPress);
+        canvas.addEventListener('mouseup', cancelLongPress);
+        canvas.addEventListener('mouseleave', cancelLongPress);
+
+        let longPressTimer;
+
+        function handleLongPress(event) {
+            longPressTimer = setTimeout(() => {
+                const rect = canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+
+                playerAvatars.concat(opponentAvatars).forEach(avatar => {
+                    if (avatar.isPointInside(x, y)) {
+                        showAStatsBox(avatar);
+                    }
+                });
+
+                playerHand.forEach(card => {
+                    if (card.isPointInside(x, y)) {
+                        showCardInfoBox(card);
+                    }
+                });
+
+                // Check if the deck was long-pressed
+                if (x >= 10 && x <= 90 && y >= canvas.height - 130 && y <= canvas.height - 10) {
+                    showDeckOptions();
+                }
+            }, 500);
+        }
+
+        function cancelLongPress() {
+            clearTimeout(longPressTimer);
+        }
+
+        document.addEventListener('click', (event) => {
+            if (!aStatsBox.contains(event.target) && !cardInfoBox.contains(event.target) && !deckOptions.contains(event.target) && !cardBrowser.contains(event.target)) {
+                aStatsBox.style.display = 'none';
+                cardInfoBox.style.display = 'none';
+                deckOptions.style.display = 'none';
+                cardBrowser.style.display = 'none';
+            }
+        });
+
+        function updateSurrenderButtonVisibility() {
+            surrenderButton.style.display = currentTurn === 'player' ? 'block' : 'none';
+        }
+
+        function showDeckOptions() {
+            deckOptions.style.display = 'block';
+        }
+
+        function saveDeck() {
+            const gameState = {
+                playerDeck: playerDeck,
+                playerAvatars: playerAvatars
+            };
+            const jsonString = JSON.stringify(gameState);
+            const blob = new Blob([jsonString], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${playerAvatars.map(avatar => avatar.race).join('_')}.deck`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function loadDeck(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const gameState = JSON.parse(e.target.result);
+                    if (gameState.playerDeck && gameState.playerAvatars) {
+                        playerDeck = gameState.playerDeck;
+                        playerAvatars = gameState.playerAvatars;
+                        initializeGame();
+                    } else {
+                        throw new Error("Invalid deck file");
+                    }
+                } catch (error) {
+                    alert("Not a valid deck file");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function setCookie(name, value, days) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+            document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+        }
+
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for(let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        function showCardBrowser() {
+            cardBrowser.style.display = 'block';
+            populateCardBrowser();
+        }
+
+        function populateCardBrowser() {
+            cardGrid.innerHTML = '';
+            cardDetails.innerHTML = '';
+
+            const allCards = [
+                ...elementalCards.map(card => ({ type: 'elemental', ...card })),
+                ...utilityCards.map(card => ({ type: 'utility', ...card })),
+                ...elementalWeapons.map(card => ({ type: 'elemental weapon', ...card })),
+                { type: 'special utility', name: 'Lucky Star', emoji: emojis.luckyStar },
+                { type: 'special utility', name: 'Third Hand', emoji: emojis.thirdHand },
+                ...avatarTypes.map(avatar => ({ type: 'avatar', ...avatar }))
+            ];
+
+            allCards.forEach(card => {
+                const cardItem = document.createElement('div');
+                cardItem.className = 'card-item';
+                cardItem.textContent = card.emoji || card.elementEmoji || emojis[card.element] || emojis[card.type];
+                cardItem.onclick = () => showCardDetails(card);
+                cardGrid.appendChild(cardItem);
+            });
+        }
+
+        function showCardDetails(card) {
+            cardDetails.innerHTML = '';
+
+            const nameElement = document.createElement('h3');
+            nameElement.textContent = card.name || card.element || card.type;
+            cardDetails.appendChild(nameElement);
+
+            const typeElement = document.createElement('p');
+            typeElement.textContent = `Type: ${card.type}`;
+            cardDetails.appendChild(typeElement);
+
+            if (card.element) {
+                const elementElement = document.createElement('p');
+                elementElement.textContent = `Element: ${card.element}`;
+                cardDetails.appendChild(elementElement);
+            }
+
+            if (card.weaponType) {
+                const weaponElement = document.createElement('p');
+                weaponElement.textContent = `Weapon: ${card.weaponType}`;
+                cardDetails.appendChild(weaponElement);
+            }
+
+            const emojiElement = document.createElement('p');
+            emojiElement.textContent = `Emoji: ${card.emoji || card.elementEmoji || emojis[card.element] || emojis[card.type]}`;
+            cardDetails.appendChild(emojiElement);
+
+            // Add more details as needed
+        }
+    </script>
+<script defer="" src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon="{&quot;rayId&quot;:&quot;8c2a48ec9b5f5ca1&quot;,&quot;version&quot;:&quot;2024.8.0&quot;,&quot;r&quot;:1,&quot;token&quot;:&quot;5562e2e56e7244b2af1869a8c731adb3&quot;,&quot;serverTiming&quot;:{&quot;name&quot;:{&quot;cfExtPri&quot;:true,&quot;cfL4&quot;:true}}}" crossorigin="anonymous"></script>
+
+<script>
+                        let lastTouchEnd = 0;
+
+                        document.addEventListener('touchstart', function(e) {
+                            if (e.touches.length > 1) {
+                                e.preventDefault();
+                            }
+                        }, { passive: false });
+
+                        document.addEventListener('touchend', function(e) {
+                            const now = (new Date()).getTime();
+                            if (now - lastTouchEnd <= 300) {
+                                e.preventDefault();
+                            }
+                            lastTouchEnd = now;
+                        }, false);
+
+                        document.addEventListener('touchmove', function(e) {
+                            if (e.touches.length > 1) {
+                                e.preventDefault();
+                            }
+                        }, { passive: false });
+                    </script></body></html>
