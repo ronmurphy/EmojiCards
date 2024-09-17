@@ -24,42 +24,26 @@
         border: 2px solid #ffffff;
         box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
       }
-      #startMenu,
-      #tutorialOverlay,
-      #attackConfirmation,
-      #gameOverMenu,
-      #assignmentConfirmation,
-      #deckOptions,
-      #cardBrowser {
-        position: absolute;
-        background-color: rgba(0, 0, 0, 0.8);
-        padding: 20px;
-        border-radius: 10px;
-        text-align: center;
-      }
-      #readyButton,
-      #surrenderButton,
-      #nextButton,
-      #yesButton,
-      #noButton,
-      #newGameButton,
-      #saveDeckButton,
-      #loadDeckButton,
-      #tutorialButton,
-      #cardBrowserButton,
-      #yesAssign {
-        background-color: #4caf50;
-        border: none;
-        color: white;
-        padding: 15px 32px;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 16px;
-        margin: 4px 2px;
-        cursor: pointer;
-        border-radius: 5px;
-      }
+        #startMenu, #tutorialOverlay, #attackConfirmation, #gameOverMenu, #assignmentConfirmation, #deckOptions, #cardBrowser, #cardTutorial {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        #readyButton, #surrenderButton, #nextButton, #yesButton, #noButton, #newGameButton, #saveDeckButton, #loadDeckButton, #tutorialButton, #cardBrowserButton, #cardTutorialButton {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
       #surrenderButton {
         background-color: #f44336;
         position: absolute;
@@ -466,6 +450,51 @@
       .special-card {
         box-shadow: 0 0 10px gold;
       }
+        }
+        .tutorial-card {
+            width: 200px;
+            height: 300px;
+            background-color: white;
+            border-radius: 10px;
+            margin: 20px auto;
+            position: relative;
+            color: black;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .tutorial-card .avatar {
+            font-size: 80px;
+            text-align: center;
+        }
+        .tutorial-card .stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 16px;
+        }
+        .tutorial-card .attached-cards {
+            display: flex;
+            justify-content: center;
+            font-size: 24px;
+            gap: 10px;
+        }
+        .tutorial-highlight {
+            border: 3px solid #ff0000;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255,0,0,0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255,0,0,0); }
+            100% { box-shadow: 0 0 0 0 rgba(255,0,0,0); }
+        }
+        .tutorial-text {
+            margin-top: 20px;
+            text-align: left;
+            font-size: 18px;
+            line-height: 1.5;
+        }
     </style>
   </head>
   <body>
@@ -527,7 +556,7 @@
       const startMenu = document.getElementById('startMenu')
       const readyButton = document.getElementById('readyButton')
       const surrenderButton = document.getElementById('surrenderButton')
-      const tutorialButton = document.getElementById('tutorialButton')
+     const tutorialButton = document.getElementById('tutorialButton') 
       const tutorialOverlay = document.getElementById('tutorialOverlay')
       const tutorialContent = document.getElementById('tutorialContent')
       const nextButton = document.getElementById('nextButton')
@@ -553,6 +582,11 @@
       const cardGrid = document.getElementById('cardGrid')
       const cardDetails = document.getElementById('cardDetails')
 
+const document.getElementById('cardTutorialButton');
+        const cardTutorial = document.getElementById('cardTutorial');
+        const cardTutorialContent = document.getElementById('cardTutorialContent');
+        const cardTutorialNextButton = document.getElementById('cardTutorialNextButton');
+      
       let gameStarted = false
       let bgm
       let tutorialStep = 0
@@ -583,7 +617,8 @@
 
       readyButton.addEventListener('click', startGame)
       surrenderButton.addEventListener('click', surrender)
-      tutorialButton.addEventListener('click', startTutorial)
+     // tutorialButton.addEventListener('click', startTutorial)
+     tutorialButton.addEventListener('click', startCardTutorial); 
       nextButton.addEventListener('click', nextTutorialStep)
       yesButton.addEventListener('click', () => confirmAttack(true))
       noButton.addEventListener('click', () => confirmAttack(false))
@@ -599,6 +634,11 @@
         toggleCardBrowserDebug()
       })
 
+       cardTutorialButton.addEventListener('click', startCardTutorial);
+        cardTutorialNextButton.addEventListener('click', nextCardTutorialStep);
+      
+      
+      
       function startGame() {
         gameStarted = true
         startMenu.style.display = 'none'
@@ -3426,6 +3466,174 @@ function populateCardGrid(cards) {
 
         console.log('Cards added to grid:', cardGrid.children.length)
       }
+
+      function startCardTutorial() {
+            cardTutorial.style.display = 'block';
+            cardTutorialStep = 0;
+            nextCardTutorialStep();
+        }
+
+        let cardTutorialStep = 0;
+        const cardTutorialSteps = [
+            {
+                title: "Avatar Card",
+                content: `
+                    <div class="tutorial-card">
+                        <div class="avatar">🧙</div>
+                        <div class="stats">
+                            <span class="tutorial-highlight">❤️:7/10</span>
+                            <span>👊:6</span>
+                        </div>
+                        <div class="stats">
+                            <span>🍀:4</span>
+                            <span>🛡️:3</span>
+                        </div>
+                    </div>
+                    <div class="tutorial-text">
+                        <p>This is an Avatar Card. It represents a character in battle.</p>
+                        <p>The highlighted stat is the HP (Health Points). It shows current HP / max HP.</p>
+                        <p>HP is crucial as it determines how much damage your avatar can take before being defeated.</p>
+                    </div>
+                `
+            },
+            {
+                title: "Avatar Card Stats",
+                content: `
+                    <div class="tutorial-card">
+                        <div class="avatar">🧙</div>
+                        <div class="stats">
+                            <span>❤️:7/10</span>
+                            <span class="tutorial-highlight">👊:6</span>
+                        </div>
+                        <div class="stats">
+                            <span class="tutorial-highlight">🍀:4</span>
+                            <span class="tutorial-highlight">🛡️:3</span>
+                        </div>
+                    </div>
+                    <div class="tutorial-text">
+                        <p>👊 Attack: Determines the damage dealt to opponents.</p>
+                        <p>🍀 Luck: Affects the chance of a successful attack.</p>
+                        <p>🛡️ Defense: Reduces damage taken from enemy attacks.</p>
+                        <p>These stats are crucial for battle strategy!</p>
+                    </div>
+                `
+            },
+            {
+                title: "Elemental Cards",
+                content: `
+                    <div style="display: flex; justify-content: space-around;">
+                        <div class="tutorial-card" style="width: 100px; height: 150px;">
+                            <div class="avatar">🔥</div>
+                            <div>Fire</div>
+                        </div>
+                        <div class="tutorial-card" style="width: 100px; height: 150px;">
+                            <div class="avatar">💧</div>
+                            <div>Water</div>
+                        </div>
+                        <div class="tutorial-card" style="width: 100px; height: 150px;">
+                            <div class="avatar">🌿</div>
+                            <div>Earth</div>
+                        </div>
+                    </div>
+                    <div class="tutorial-text">
+                        <p>Elemental cards can be attached to avatars to grant special effects:</p>
+                        <p>🔥 Fire: Increases attack power</p>
+                        <p>💧 Water: Boosts defense</p>
+                        <p>🌿 Earth: Heals the avatar</p>
+                        <p>Attaching these cards strategically can turn the tide of battle!</p>
+                    </div>
+                `
+            },
+            {
+                title: "Utility Cards",
+                content: `
+                    <div style="display: flex; justify-content: space-around;">
+                        <div class="tutorial-card" style="width: 100px; height: 150px;">
+                            <div class="avatar">🗡️</div>
+                            <div>Sword</div>
+                        </div>
+                        <div class="tutorial-card" style="width: 100px; height: 150px;">
+                            <div class="avatar">🛡️</div>
+                            <div>Shield</div>
+                        </div>
+                    </div>
+                    <div class="tutorial-text">
+                        <p>Utility cards provide various benefits when attached to avatars:</p>
+                        <p>🗡️ Sword: Significantly increases attack power</p>
+                        <p>🛡️ Shield: Greatly enhances defense</p>
+                        <p>These cards can be combined with elemental cards for powerful effects!</p>
+                    </div>
+                `
+            },
+            {
+                title: "Special Utility Cards",
+                content: `
+                    <div style="display: flex; justify-content: space-around;">
+                        <div class="tutorial-card lucky-star" style="width: 100px; height: 150px;">
+                            <div class="avatar">🌟</div>
+                            <div>Lucky Star</div>
+                        </div>
+                        <div class="tutorial-card" style="width: 100px; height: 150px;">
+                            <div class="avatar">✋</div>
+                            <div>Third Hand</div>
+                        </div>
+                        <div class="tutorial-card elemental-weapon" style="width: 100px; height: 150px;">
+                            <div class="avatar">🗡️</div>
+                            <div>Fire Sword</div>
+                            <div style="position: absolute; bottom: 5px; right: 5px; font-size: 20px;">🔥</div>
+                        </div>
+                    </div>
+                    <div class="tutorial-text">
+                        <p>Special utility cards have unique and powerful effects:</p>
+                        <p>🌟 Lucky Star: Grants a massive attack boost for one turn</p>
+                        <p>✋ Third Hand: Allows an avatar to hold one extra card</p>
+                        <p>🗡️🔥 Elemental Weapons: Combine the effects of weapons and elements</p>
+                        <p>These cards are rare but can dramatically change the course of a battle!</p>
+                    </div>
+                `
+            },
+            {
+                title: "Gameplay Overview",
+                content: `
+                    <div class="tutorial-card" style="width: 300px; height: 200px;">
+                        <div style="display: flex; justify-content: space-around;">
+                            <div class="avatar">🧙</div>
+                            <div class="avatar" style="color: red;">💀</div>
+                            <div class="avatar">🧝</div>
+                        </div>
+                        <div class="attached-cards">
+                            <span>🔥</span>
+                            <span>🗡️</span>
+                        </div>
+                        <div class="stats">
+                            <span>❤️:5/10</span>
+                            <span>👊:8</span>
+                        </div>
+                    </div>
+                    <div class="tutorial-text">
+                        <p>1. Start with 4 cards in your hand</p>
+                        <p>2. Assign up to 2 cards to your avatars</p>
+                        <p>3. Choose an avatar to attack with</p>
+                        <p>4. Luck determines if the attack hits</p>
+                        <p>5. Defeated avatars (💀) can't be used</p>
+                        <p>6. Win by defeating all enemy avatars!</p>
+                    </div>
+                `
+            }
+        ];
+
+        function nextCardTutorialStep() {
+            if (cardTutorialStep < cardTutorialSteps.length) {
+                const step = cardTutorialSteps[cardTutorialStep];
+                cardTutorialContent.innerHTML = `
+                    <h3>${step.title}</h3>
+                    ${step.content}
+                `;
+                cardTutorialStep++;
+            } else {
+                cardTutorial.style.display = 'none';
+            }
+        }
     </script>
   </body>
 </html>
