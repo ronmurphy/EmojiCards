@@ -48,7 +48,10 @@
       #tutorialButton,
       #cardBrowserButton,
       #cardTutorialButton,
-      #yesAssign {
+      #yesAssign,
+      #yesAssignButton,
+      #noAssignButton
+       {
         background-color: #4caf50;
         border: none;
         color: white;
@@ -3251,20 +3254,6 @@ function populateCardGrid(cards) {
           document.getElementById('cardDetails').innerHTML = ''
         }
       }
-
-      // showDeckButton.onclick = () => {
-      //   isViewingPlayerDeck = !isViewingPlayerDeck
-      //   if (isViewingPlayerDeck) {
-      //     populateCardGrid(playerDeck)
-      //     showDeckButton.textContent = 'Show All Cards'
-      //     saveCardButton.textContent = 'Remove Card from Deck'
-      //   } else {
-      //     populateCardGrid(allCards)
-      //     showDeckButton.textContent = 'Show Current Deck'
-      //     saveCardButton.textContent = 'Save Card to Deck'
-      //   }
-      //   document.getElementById('cardDetails').innerHTML = ''
-      // }
 
 
       function createCard(type, emoji, effect, rarity = 'common') {
