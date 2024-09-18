@@ -592,7 +592,7 @@
       <h2>Skip card assignment and attack?</h2>
       <button id="yesAssignButton">Yes</button>
       <button id="noAssignButton">No</button>
-    </div>
+  </div>
     <div id="gameOverMenu">
       <h2 id="gameOverMessage"></h2>
       <button id="newGameButton">New Game</button>
@@ -650,8 +650,8 @@
       const assignmentConfirmation = document.getElementById(
         'assignmentConfirmation'
       )
-      const yesAssignButton = document.getElementById('yesAssignButton')
-      const noAssignButton = document.getElementById('noAssignButton')
+      document.getElementById('yesAssignButton').addEventListener('click', () => skipAssignmentPhase(true));
+      document.getElementById('noAssignButton').addEventListener('click', () => skipAssignmentPhase(false));
       const gameOverMenu = document.getElementById('gameOverMenu')
       const gameOverMessage = document.getElementById('gameOverMessage')
       const newGameButton = document.getElementById('newGameButton')
@@ -721,23 +721,23 @@ cardTutorialNextButton.addEventListener('click', nextCardTutorialStep);
 //     overflowAvatar = null;
 // });
 
-      function startGame() {
-        gameStarted = true
-        startMenu.style.display = 'none'
-        initializeGame()
-        bgm = new Howl({
-          src: [
-            'https://assets.caisual.com/games/zqfqt5j5yt3lzb0v/rpg_battle_bgm.webp'
-          ],
-          loop: true,
-          volume: 0.5
-        })
-        bgm.play()
-        if (!getCookie('tutorialCompleted')) {
-          startCardTutorial();
-        }
-        gameLoop()
-      }
+function startGame() {
+    gameStarted = true;
+    startMenu.style.display = 'none';
+    initializeGame();
+    bgm = new Howl({
+        src: ['https://assets.caisual.com/games/zqfqt5j5yt3lzb0v/rpg_battle_bgm.webp'],
+        loop: true,
+        volume: 0.5
+    });
+    bgm.play();
+    
+    if (getCookie('cardTutorialCompleted') !== 'true') {
+        startCardTutorial();
+    }
+    
+    gameLoop();
+}
 
       function surrender() {
         endGame('You surrendered!')
@@ -1090,7 +1090,7 @@ cardTutorialNextButton.addEventListener('click', nextCardTutorialStep);
 
             if (card.isElementalWeapon) {
                 ctx.font = '14px Arial';
-                ctx.fillText(card.effect.elementEmoji, -40 + 20 * index, -this.height / 2 + 10);
+                ctx.fillText(emojis[card.effect.element], -40 + 20 * index, -this.height / 2 + 10);
             }
         });
 
@@ -1864,23 +1864,20 @@ cardTutorialNextButton.addEventListener('click', nextCardTutorialStep);
       
 
       function createPlayerDeck() {
-    playerDeck = []; // Reset the player deck
+    playerDeck = [];
     for (let i = 0; i < 40; i++) {
         let newCard;
         const roll = Math.random();
         
         if (roll < 0.025) {
-            // 1 in 40 chance for Lucky Star
             newCard = createCard('special', emojis.luckystar, { type: 'luckyStar' }, 'legendary');
         } else if (roll < 0.05) {
-            // 1 in 40 chance for Third Hand
             newCard = createCard('special', emojis.thirdhand, { type: 'thirdHand' }, 'legendary');
         } else if (roll < 0.2) {
-            // 15% chance for elemental weapon
             const elementalWeapon = elementalWeapons[Math.floor(Math.random() * elementalWeapons.length)];
             newCard = createCard(
                 'Elemental Weapon',
-                elementalWeapon.elementEmoji,
+                emojis[elementalWeapon.weaponType],
                 {
                     type: elementalWeapon.weaponType,
                     element: elementalWeapon.element
@@ -1888,11 +1885,9 @@ cardTutorialNextButton.addEventListener('click', nextCardTutorialStep);
                 'rare'
             );
         } else if (roll < 0.9) {
-            // 70% chance for elemental card
             const elementalEffect = elementalCards[Math.floor(Math.random() * elementalCards.length)];
-    newCard = new Card('elemental', emojis[elementalEffect.element], elementalEffect);
-  } else {
-            // 10% chance for utility card
+            newCard = new Card('elemental', emojis[elementalEffect.element], elementalEffect);
+        } else {
             const utilityEffect = utilityCards[Math.floor(Math.random() * utilityCards.length)];
             newCard = createCard('utility', emojis[utilityEffect.type], utilityEffect);
         }
@@ -1900,8 +1895,7 @@ cardTutorialNextButton.addEventListener('click', nextCardTutorialStep);
         playerDeck.push(newCard);
     }
     
-    currentPlayerDeck = playerDeck.slice(); // Update currentPlayerDeck
-    console.log('Player Deck created:', playerDeck);
+    console.log('Player Deck created:', playerDeck.length, 'cards');
 }
 
 
@@ -2072,6 +2066,7 @@ function startCardTutorial() {
         cardTutorialStep++;
     } else {
         document.getElementById('cardTutorial').style.display = 'none';
+        setCookie('cardTutorialCompleted', 'true', 365); // Set cookie for 1 year
     }
 }
 
@@ -2262,51 +2257,49 @@ function startCardTutorial() {
       canvas.addEventListener('contextmenu', handleRightClick)
 
       function handleClick(event) {
-        const rect = canvas.getBoundingClientRect()
-        const x = event.clientX - rect.left
-        const y = event.clientY - rect.top
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
 
-        if (currentTurn === 'player') {
-          playerHand.forEach(card => {
+    if (currentTurn === 'player') {
+        playerHand.forEach(card => {
             if (card.isPointInside(x, y)) {
-              if (selectedCard === card) {
-                selectedCard.selected = false
-                selectedCard = null
-              } else {
-                if (selectedCard) selectedCard.selected = false
-                card.selected = true
-                selectedCard = card
-              }
-            }
-          })
-
-          playerAvatars.forEach(avatar => {
-            if (avatar.isPointInside(x, y) && !avatar.isDead) {
-              if (selectedCard && currentPhase === 1) {
-                if (avatar.attachCard(selectedCard)) {
-                  const index = playerHand.indexOf(selectedCard)
-                  if (index > -1) {
-                    playerHand.splice(index, 1)
-                  }
-                  selectedCard = null
-                  if (avatar.attachedCards.length === avatar.maxAttachedCards) {
-                    currentPhase = 2
-                  }
-                  positionElements()
+                if (selectedCard === card) {
+                    selectedCard.selected = false;
+                    selectedCard = null;
                 } else {
-                  avatar.shake()
+                    if (selectedCard) selectedCard.selected = false;
+                    card.selected = true;
+                    selectedCard = card;
                 }
-              } else if (currentPhase === 1 && !selectedCard) {
-                showAssignmentConfirmation()
-              } else if (currentPhase === 2 && !attackingAvatar) {
-                avatar.rotation = 15
-                attackingAvatar = avatar
-                showAttackConfirmation()
-              }
             }
-          })
-        }
-      }
+        });
+
+        playerAvatars.forEach(avatar => {
+            if (avatar.isPointInside(x, y) && !avatar.isDead) {
+                if (selectedCard && currentPhase === 1) {
+                    if (avatar.attachCard(selectedCard)) {
+                        const index = playerHand.indexOf(selectedCard);
+                        if (index > -1) {
+                            playerHand.splice(index, 1);
+                        }
+                        selectedCard = null;
+                        if (avatar.attachedCards.length === avatar.maxAttachedCards) {
+                            currentPhase = 2;
+                        }
+                        positionElements();
+                    } else {
+                        avatar.shake();
+                    }
+                } else if (currentPhase === 1 && !selectedCard) {
+                    showAssignmentConfirmation(avatar);
+                } else if (currentPhase === 2 && !attackingAvatar) {
+                    initiateAttack(avatar);
+                }
+            }
+        });
+    }
+}
 
       function handleRightClick(event) {
         event.preventDefault()
@@ -2360,16 +2353,30 @@ function startCardTutorial() {
         }
       }
 
-      function showAssignmentConfirmation() {
+      function showAssignmentConfirmation(avatar) {
         assignmentConfirmation.style.display = 'block'
+
+        assignmentConfirmation.avatar = avatar;
       }
 
       function skipAssignmentPhase(skip) {
-        assignmentConfirmation.style.display = 'none'
-        if (skip) {
-          currentPhase = 2
+    assignmentConfirmation.style.display = 'none';
+    if (skip) {
+        currentPhase = 2;
+        // Directly initiate the attack with the stored avatar
+        if (assignmentConfirmation.avatar) {
+            initiateAttack(assignmentConfirmation.avatar);
         }
-      }
+    }
+    // Clear the stored avatar
+    assignmentConfirmation.avatar = null;
+}
+
+function initiateAttack(avatar) {
+    avatar.rotation = 15;
+    attackingAvatar = avatar;
+    showAttackConfirmation();
+}
 
       function performAttack(attacker, defender) {
     const hitChance = Math.floor(Math.random() * 10) + 1;
@@ -2826,22 +2833,21 @@ function startCardTutorial() {
       }
 
       function setCookie(name, value, days) {
-        const expires = new Date()
-        expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000)
-        document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`
-      }
+    const expires = new Date();
+    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+}
 
-      function getCookie(name) {
-        const nameEQ = name + '='
-        const ca = document.cookie.split(';')
-        for (let i = 0; i < ca.length; i++) {
-          let c = ca[i]
-          while (c.charAt(0) === ' ') c = c.substring(1, c.length)
-          if (c.indexOf(nameEQ) === 0)
-            return c.substring(nameEQ.length, c.length)
-        }
-        return null
-      }
+function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
 
       function initializeCardBrowser() {
         if (!cardBrowser) {
@@ -3315,7 +3321,7 @@ function populateCardGrid(cards) {
             // Draw elemental effect for elemental weapons
             if (this.isElementalWeapon) {
                 ctx.font = '20px Arial';
-                ctx.fillText(this.effect.elementEmoji, this.width / 2 - 25, this.height / 2 - 25);
+                ctx.fillText(emojis[this.effect.element], this.width / 2 - 25, this.height / 2 - 25);
             }
 
             // Draw heal animation for heal cards
